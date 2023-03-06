@@ -42,25 +42,38 @@ public class TableManagerImpl implements TableManager{
                          String[] primaryKeyAttributeNames) {
     // your code
 
+    // Check attribute type correct
+    if(attributeType == null || attributeNames == null) {return StatusCode.TABLE_CREATION_ATTRIBUTE_INVALID;}
+    for(AttributeType type: attributeType) {
+      if(type == null) {
+        System.out.println("ATTRIBUTE TYPE CANNOT BE NULL");
+        return StatusCode.TABLE_CREATION_ATTRIBUTE_INVALID;
+      }
+    }
+
+    // check primary keys null
+    if (primaryKeyAttributeNames == null || primaryKeyAttributeNames.length == 0) {
+      System.out.println("PRIMARY KEY CANNOT BE NULL");
+      return StatusCode.TABLE_CREATION_NO_PRIMARY_KEY;
+      }
+
+    TableMetadata metadata = new TableMetadata(attributeNames, attributeType, primaryKeyAttributeNames);
+
     // Check table already exists
     if (tableMetaDatas.containsKey(tableName)) {
       System.out.println("TABLE " + tableName + " ALREADY EXIST!");
       return StatusCode.ATTRIBUTE_ALREADY_EXISTS;
     }
 
-    // check primary keys null
-    if (primaryKeyAttributeNames.length == 0) {
-      System.out.println("PRIMARY KEY CANNOT BE NULL");
-      return StatusCode.TABLE_CREATION_NO_PRIMARY_KEY;
-    }
 
-    // Check attribute type correct
-    for(AttributeType type: attributeType) {
-      if(type == null) {
-        System.out.println("ATTRIBUTE TYPE CANNOT BE NULL");
-        return StatusCode.ATTRIBUTE_TYPE_NOT_SUPPORTED;
+    // check primary key appears in attributes
+    for(String pk: primaryKeyAttributeNames) {
+      if(!metadata.doesAttributeExist(pk)) {
+        return StatusCode.TABLE_CREATION_PRIMARY_KEY_NOT_FOUND;
       }
     }
+
+    
 
     // check duplicate attribute name
     Set<String> set = new HashSet<>();
@@ -72,7 +85,6 @@ public class TableManagerImpl implements TableManager{
     }
 
     // Finally create table
-    TableMetadata metadata = new TableMetadata(attributeNames, attributeType, primaryKeyAttributeNames);
     tableMetaDatas.put(tableName, metadata);
     rootDirectory.create(db, PathUtil.from(tableName)).join();
 
@@ -112,7 +124,7 @@ public class TableManagerImpl implements TableManager{
     // your code
 
     // check attribute already exists
-    if(tableMetaDatas.get(tableName).doesAttributeExist(attributeName)) {
+    if(tableMetaDatas.get(tableName) != null && tableMetaDatas.get(tableName).doesAttributeExist(attributeName)) {
       System.out.println("ATTRIBUTE NAME ALREADY EXISTS");
       return StatusCode.ATTRIBUTE_ALREADY_EXISTS;
     }
@@ -123,6 +135,9 @@ public class TableManagerImpl implements TableManager{
       return StatusCode.ATTRIBUTE_TYPE_NOT_SUPPORTED;
     }
 
+    if(tableMetaDatas.get(tableName) == null) {
+      tableMetaDatas.put(tableName, new TableMetadata());
+    }
     tableMetaDatas.get(tableName).addAttribute(attributeName, attributeType);
     return StatusCode.SUCCESS;
   }
